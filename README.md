@@ -2,6 +2,8 @@
 
 Proto-me is a product prototype exploration tool for Codex — built to move an idea toward executable implementation. It works through discovery, planning, optional visual design, agent generation, and execution handoff inside the active project context, making every step from idea to implementation visible, editable, and handoff-ready.
 
+中文说明: [README.zh.md](README.zh.md)
+
 ## Product Philosophy
 
 The core problem Proto-me solves: how does a rough idea become an executable prototype?
@@ -116,6 +118,8 @@ Use $proto-image-gen to create an infographic that explains the core workflow fr
 
 Codex generates from the brief and places standalone images in a clear area to the right of the current text brief. If an AI image holder is selected in the interactive workspace, Codex generates for that holder's size and aspect ratio.
 
+![Generate and insert a new image with Proto-me](assets/generate-image.png)
+
 ### Revise From An Annotation Screenshot
 
 1. Annotate an image in the interactive workspace.
@@ -127,6 +131,8 @@ Use $proto-image-edit to revise this Proto-me visual design from my annotation s
 ```
 
 Codex reads the notes and arrows in the screenshot, generates a clean revised image without annotation artifacts, and places it beside the original. The original image and annotations are not deleted or moved.
+
+![Generate a revised image from a Proto-me annotation screenshot](assets/annotation-edit.png)
 
 ### Go Directly To Agent
 
@@ -147,6 +153,8 @@ Open the Proto-me canvas for this project.
 ```
 
 Proto-me starts a local service at `http://127.0.0.1:43217/`. If the default port is busy, Vite chooses a fallback port and writes the actual URL to `canvas/<slug>/proto-me-runtime.json`. In the Codex desktop app, Codex automatically opens the workspace in the in-app browser.
+
+![Open Proto-me interactive workspace in Codex](assets/open-canvas.png)
 
 ## Skills
 
@@ -180,7 +188,7 @@ Proto-me starts a local service at `http://127.0.0.1:43217/`. If the default por
 Send the following message to Codex:
 
 ```text
-Please install the Proto-me Codex plugin from https://github.com/protome-dev/proto-skills.git.
+Please install the Proto-me Codex plugin from https://github.com/protome-dev/protome-skills.git.
 Clone the repository into ~/plugins/proto-me, verify that .codex-plugin/plugin.json exists,
 add the plugin to the personal marketplace, run codex plugin marketplace add ~,
 then run codex plugin add proto-me@personal.
@@ -193,7 +201,7 @@ Clone the plugin into the default location referenced by the Codex personal mark
 
 ```bash
 mkdir -p ~/plugins
-git clone https://github.com/protome-dev/proto-skills.git ~/plugins/proto-me
+git clone https://github.com/protome-dev/protome-skills.git ~/plugins/proto-me
 cd ~/plugins/proto-me
 npm install
 npm run build
