@@ -1,0 +1,7 @@
+interface:
+  display_name: "Proto-me: Image Gen"
+  short_description: "Generate Proto visual designs on canvas"
+  default_prompt: "Use $proto-image-gen to generate a product prototype visual design on the Proto-me canvas."
+
+policy:
+  allow_implicit_invocation: true

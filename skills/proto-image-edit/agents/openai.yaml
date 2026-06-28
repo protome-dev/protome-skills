@@ -1,0 +1,4 @@
+interface:
+  display_name: "Proto-me: Image Edit"
+  short_description: "Revise Proto visuals from annotations"
+  default_prompt: "Use $proto-image-edit to revise my Proto-me visual design from annotated screenshots and place each result beside its original."

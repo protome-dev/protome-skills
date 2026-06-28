@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Default",
+    "description": "Explore / Plan / optional Design / Agent / Refine / Execute product prototype workflow",
+    "prompt": [
+      "Use this single default workflow silently. Do not ask the user to choose a template.",
+      "",
+      "- Explore: understand the user's idea and the current project in plain language.",
+      "- Plan: clarify the product prototype with Fast or Slow questioning.",
+      "- Design: optionally use proto-image-gen to create prototype/product visuals on the canvas, and proto-image-edit to revise them. The user can skip Design and go directly from Plan to Agent.",
+      "- Agent: generate a durable executable agent file from the product brief.",
+      "- Refine: let the user adjust the agent before execution.",
+      "- Execute: after confirmation, follow the generated agent file and implement."
+    ]
+  }
+]

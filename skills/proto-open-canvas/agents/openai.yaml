@@ -1,0 +1,4 @@
+interface:
+  display_name: "Proto-me: Open Canvas"
+  short_description: "Open the Proto-me infinite canvas"
+  default_prompt: "Use $proto-open-canvas to open the Proto-me infinite canvas."
