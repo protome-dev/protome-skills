@@ -2,8 +2,6 @@
 
 Proto-me is a product prototype exploration tool for Codex — built to move an idea toward executable implementation. It works through discovery, planning, optional visual design, agent generation, and execution handoff inside the active project context, making every step from idea to implementation visible, editable, and handoff-ready.
 
-中文说明: [README.zh.md](README.zh.md)
-
 ## Product Philosophy
 
 The core problem Proto-me solves: how does a rough idea become an executable prototype?
@@ -190,14 +188,15 @@ Send the following message to Codex:
 ```text
 Please install the Proto-me Codex plugin from https://github.com/protome-dev/protome-skills.git.
 Clone the repository into ~/marketplace/plugins/proto-me, verify that .codex-plugin/plugin.json exists,
-add the plugin to the personal marketplace, run codex plugin marketplace add ~/marketplace,
-then run codex plugin add proto-me@personal.
+create or update ~/marketplace/.agents/plugins/marketplace.json with marketplace name protome-bundled,
+run codex plugin marketplace add ~/marketplace,
+then run codex plugin add proto-me@protome-bundled.
 After installing, validate the plugin and tell me whether I should start a new conversation to load the new skills and MCP tools.
 ```
 
 ### Manual Install
 
-Clone the plugin into the marketplace root referenced by the Codex personal marketplace:
+Clone the plugin into the marketplace root referenced by the Codex protome-bundled marketplace:
 
 ```bash
 mkdir -p ~/marketplace/plugins
@@ -207,13 +206,13 @@ npm install
 npm run build
 ```
 
-Make sure `~/marketplace/.agents/plugins/marketplace.json` contains a Proto-me entry:
+Make sure `~/marketplace/.agents/plugins/marketplace.json` defines the protome-bundled marketplace and contains a Proto-me entry:
 
 ```json
 {
-  "name": "personal",
+  "name": "protome-bundled",
   "interface": {
-    "displayName": "Personal"
+    "displayName": "Proto-me Bundled"
   },
   "plugins": [
     {
@@ -232,11 +231,11 @@ Make sure `~/marketplace/.agents/plugins/marketplace.json` contains a Proto-me e
 }
 ```
 
-Then register the personal marketplace and install the plugin:
+Then register the protome-bundled marketplace and install the plugin:
 
 ```bash
 codex plugin marketplace add ~/marketplace
-codex plugin add proto-me@personal
+codex plugin add proto-me@protome-bundled
 ```
 
 After installing, start a new Codex conversation so the new skills and MCP tools are loaded cleanly.
