@@ -189,25 +189,25 @@ Send the following message to Codex:
 
 ```text
 Please install the Proto-me Codex plugin from https://github.com/protome-dev/protome-skills.git.
-Clone the repository into ~/plugins/proto-me, verify that .codex-plugin/plugin.json exists,
-add the plugin to the personal marketplace, run codex plugin marketplace add ~,
+Clone the repository into ~/marketplace/plugins/proto-me, verify that .codex-plugin/plugin.json exists,
+add the plugin to the personal marketplace, run codex plugin marketplace add ~/marketplace,
 then run codex plugin add proto-me@personal.
 After installing, validate the plugin and tell me whether I should start a new conversation to load the new skills and MCP tools.
 ```
 
 ### Manual Install
 
-Clone the plugin into the default location referenced by the Codex personal marketplace:
+Clone the plugin into the marketplace root referenced by the Codex personal marketplace:
 
 ```bash
-mkdir -p ~/plugins
-git clone https://github.com/protome-dev/protome-skills.git ~/plugins/proto-me
-cd ~/plugins/proto-me
+mkdir -p ~/marketplace/plugins
+git clone https://github.com/protome-dev/protome-skills.git ~/marketplace/plugins/proto-me
+cd ~/marketplace/plugins/proto-me
 npm install
 npm run build
 ```
 
-Make sure `~/.agents/plugins/marketplace.json` contains a Proto-me entry:
+Make sure `~/marketplace/.agents/plugins/marketplace.json` contains a Proto-me entry:
 
 ```json
 {
@@ -235,7 +235,7 @@ Make sure `~/.agents/plugins/marketplace.json` contains a Proto-me entry:
 Then register the personal marketplace and install the plugin:
 
 ```bash
-codex plugin marketplace add ~
+codex plugin marketplace add ~/marketplace
 codex plugin add proto-me@personal
 ```
 

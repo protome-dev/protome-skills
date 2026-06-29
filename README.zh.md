@@ -189,25 +189,25 @@ Proto-me 会启动本地服务，默认地址是 `http://127.0.0.1:43217/`。如
 
 ```text
 请从 https://github.com/protome-dev/protome-skills.git 安装 Proto-me Codex 插件。
-请 clone 仓库到 ~/plugins/proto-me，确认 .codex-plugin/plugin.json 存在，
-把插件加入 personal marketplace，先运行 codex plugin marketplace add ~，
+请 clone 仓库到 ~/marketplace/plugins/proto-me，确认 .codex-plugin/plugin.json 存在，
+把插件加入 personal marketplace，先运行 codex plugin marketplace add ~/marketplace，
 再运行 codex plugin add proto-me@personal。
 安装后请校验插件，并告诉我是否需要开启一个新对话来加载新技能和 MCP 工具。
 ```
 
 ### 手动安装
 
-推荐把插件 clone 到 Codex personal marketplace 默认会引用的位置：
+推荐把插件 clone 到 Codex personal marketplace root 下的位置：
 
 ```bash
-mkdir -p ~/plugins
-git clone https://github.com/protome-dev/protome-skills.git ~/plugins/proto-me
-cd ~/plugins/proto-me
+mkdir -p ~/marketplace/plugins
+git clone https://github.com/protome-dev/protome-skills.git ~/marketplace/plugins/proto-me
+cd ~/marketplace/plugins/proto-me
 npm install
 npm run build
 ```
 
-确保 `~/.agents/plugins/marketplace.json` 中有 Proto-me 条目：
+确保 `~/marketplace/.agents/plugins/marketplace.json` 中有 Proto-me 条目：
 
 ```json
 {
@@ -235,7 +235,7 @@ npm run build
 然后先注册 personal marketplace，再安装插件：
 
 ```bash
-codex plugin marketplace add ~
+codex plugin marketplace add ~/marketplace
 codex plugin add proto-me@personal
 ```
 
