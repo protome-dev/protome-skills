@@ -212,7 +212,7 @@ Make sure `~/marketplace/.agents/plugins/marketplace.json` defines the protome-b
 {
   "name": "protome-bundled",
   "interface": {
-    "displayName": "By Proto-me"
+    "displayName": "Proto-me Bundled"
   },
   "plugins": [
     {
