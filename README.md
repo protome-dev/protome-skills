@@ -47,7 +47,7 @@ Codex asks the user to choose a thinking mode:
 - **Fast**: Codex can infer low-risk defaults and only ask about key choices.
 - **Slow**: Codex asks questions and does not make product decisions for the user.
 
-Q&A produces a concise product brief. When the interactive workspace is available, Codex refreshes the brief as a central node with branches for target users, desired outcomes, user flow, core features/sections/menus, key decisions, remaining unknowns, and done criteria. If the product includes sections or menus, the brief and whiteboard name them explicitly and add one concise child detail block per item. Users can edit those nodes directly, and Codex reads those edits before the next planning round.
+Q&A produces a concise product brief. When the interactive workspace is available, Codex refreshes the brief as a central node with branches for target users, desired outcomes, user flow, core features/sections/menus, key decisions, remaining unknowns, and done criteria. If the product includes sections or menus, the brief and whiteboard name them explicitly and add one concise child detail block per item. Users can edit and rearrange those nodes directly; later refreshes preserve existing node and arrow layout, update text in place, and add missing items without rebuilding the board.
 
 ### 3. Design (Optional)
 

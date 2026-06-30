@@ -130,6 +130,7 @@ When they answer:
 - Treat product, demo, prototype, app, page, feature, or product brief Q&A as canvas-backed by default when the Proto-me MCP tools are available, unless the user explicitly asks not to use the canvas. The user does not need to ask for visual planning by name.
 - For canvas-backed Q&A, refresh the Proto-me workspace after showing the updated brief:
   - Use `upsert_proto_me_brief_whiteboard` when the Proto-me MCP tool is available, passing `projectDir` and the stable `canvasSlug`.
+  - Respect the user's current whiteboard layout. When refreshing an existing whiteboard, preserve existing node positions, arrow positions, arrow directions, and bindings; update text/meta in place and only insert missing nodes or arrows in clear space. Do not delete or rebuild existing nodes/lines unless the user explicitly asks for a full reset.
   - Put the product title in the center, and branch target users, desired outcome, main flow, core features/sections/menus, key decisions, engineering constraints/verification, remaining unknowns, and done criteria around it.
   - When the generated brief includes sections, columns, menus, or navigation entries, pass them explicitly to the whiteboard as `sections`, `columns`, `menus`, `menuItems`, or `navigationItems` instead of hiding them inside prose.
   - Pass engineering rigor through dedicated whiteboard fields when available: `engineeringConstraints`, `behavior`, `implementationScope`, `verification`, `boundaries`, and `systemImpact`.

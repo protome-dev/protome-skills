@@ -1301,6 +1301,251 @@ function matchesBriefWhiteboardMeta(record, whiteboardId = null) {
   return !whiteboardId || record.meta?.protoMeBriefWhiteboardId === whiteboardId;
 }
 
+function whiteboardRole(record) {
+  return nonEmptyString(record?.meta?.protoMeBriefWhiteboardRole);
+}
+
+function collectExistingBriefShapesByRole(store, pageId, whiteboardId = null) {
+  const shapesByRole = new Map();
+  for (const record of Object.values(store)) {
+    if (record?.typeName !== "shape") continue;
+    if (!matchesBriefWhiteboardMeta(record, whiteboardId)) continue;
+    if (!shapeBelongsToPage(store, record, pageId)) continue;
+    const role = whiteboardRole(record);
+    if (!role || shapesByRole.has(role)) continue;
+    shapesByRole.set(role, record);
+  }
+  return shapesByRole;
+}
+
+function coreItemKey(kind, title) {
+  const normalizedTitle = normalizeText(title).toLowerCase();
+  const normalizedKind = normalizeText(kind).toLowerCase();
+  return normalizedKind && normalizedTitle ? `${normalizedKind}:${normalizedTitle}` : null;
+}
+
+function collectExistingCoreItemShapesByKey(store, pageId, whiteboardId = null) {
+  const shapesByKey = new Map();
+  for (const record of Object.values(store)) {
+    if (record?.typeName !== "shape") continue;
+    if (!matchesBriefWhiteboardMeta(record, whiteboardId)) continue;
+    if (!shapeBelongsToPage(store, record, pageId)) continue;
+    const key = coreItemKey(record.meta?.protoMeCoreItemKind, record.meta?.protoMeCoreItemTitle);
+    if (!key || shapesByKey.has(key)) continue;
+    shapesByKey.set(key, record);
+  }
+  return shapesByKey;
+}
+
+function collectExistingBriefArrowsByEndTarget(store, pageId, whiteboardId = null) {
+  const arrowsByEndTarget = new Map();
+  for (const record of Object.values(store)) {
+    if (record?.typeName !== "binding") continue;
+    if (record.props?.terminal !== "end") continue;
+    const arrow = store[record.fromId];
+    if (arrow?.typeName !== "shape" || arrow.type !== "arrow") continue;
+    if (!matchesBriefWhiteboardMeta(arrow, whiteboardId)) continue;
+    if (!shapeBelongsToPage(store, arrow, pageId)) continue;
+    if (!arrowsByEndTarget.has(record.toId)) arrowsByEndTarget.set(record.toId, arrow);
+  }
+  return arrowsByEndTarget;
+}
+
+function groupArrowBindingsByArrowId(bindings) {
+  const bindingsByArrowId = new Map();
+  for (const binding of bindings) {
+    const existing = bindingsByArrowId.get(binding.fromId) ?? [];
+    existing.push(binding);
+    bindingsByArrowId.set(binding.fromId, existing);
+  }
+  return bindingsByArrowId;
+}
+
+function mergeExistingShapeWithDesired(existing, desired) {
+  const next = structuredClone(existing);
+  next.meta = { ...existing.meta, ...desired.meta };
+  if (existing.type === "text" && desired.type === "text") {
+    next.props = {
+      ...existing.props,
+      richText: desired.props.richText,
+    };
+  }
+  return next;
+}
+
+function remapBindingTarget(binding, shapeIdMap) {
+  const mappedTargetId = shapeIdMap.get(binding.toId);
+  if (!mappedTargetId) return null;
+  return {
+    ...binding,
+    toId: mappedTargetId,
+  };
+}
+
+function pointOnBounds(bounds, normalizedAnchor) {
+  return {
+    x: bounds.x + bounds.w * finiteNumber(normalizedAnchor?.x, 0.5),
+    y: bounds.y + bounds.h * finiteNumber(normalizedAnchor?.y, 0.5),
+  };
+}
+
+function arrowFromBindings({ store, parentId, desiredArrow, desiredBindings, shapeIdMap }) {
+  const startBinding = desiredBindings.find((binding) => binding.props?.terminal === "start");
+  const endBinding = desiredBindings.find((binding) => binding.props?.terminal === "end");
+  const startTargetId = shapeIdMap.get(startBinding?.toId);
+  const endTargetId = shapeIdMap.get(endBinding?.toId);
+  const startTarget = startTargetId ? store[startTargetId] : null;
+  const endTarget = endTargetId ? store[endTargetId] : null;
+
+  if (!startTarget || !endTarget) return null;
+  const startBounds = pageBoundsForShape(store, startTarget);
+  const endBounds = pageBoundsForShape(store, endTarget);
+  if (!startBounds || !endBounds) return null;
+
+  const start = pointOnBounds(startBounds, startBinding?.props?.normalizedAnchor);
+  const end = pointOnBounds(endBounds, endBinding?.props?.normalizedAnchor);
+  const arrow = {
+    ...desiredArrow,
+    parentId,
+    index: chooseIndex(store, parentId),
+    x: start.x,
+    y: start.y,
+    props: {
+      ...desiredArrow.props,
+      start: { x: 0, y: 0 },
+      end: { x: end.x - start.x, y: end.y - start.y },
+    },
+  };
+  const remappedBindings = [startBinding, endBinding]
+    .map((binding) => remapBindingTarget(binding, shapeIdMap))
+    .filter(Boolean)
+    .map((binding) => ({
+      ...binding,
+      fromId: arrow.id,
+      meta: { ...binding.meta, ...arrow.meta },
+    }));
+
+  return { arrow, bindings: remappedBindings };
+}
+
+function chooseClearShapePosition({ store, pageId, parentId, shape, stagedShapes }) {
+  const local = localBoundsForShape(shape);
+  if (!local) return { x: finiteNumber(shape.x, 0), y: finiteNumber(shape.y, 0) };
+
+  let x = finiteNumber(shape.x, 0);
+  let y = finiteNumber(shape.y, 0);
+  const width = local.w;
+  const height = local.h;
+  const margin = 40;
+  const obstacles = [
+    ...getPageShapes(store, pageId)
+      .filter((candidate) => candidate.parentId === parentId)
+      .map((candidate) => pageBoundsForShape(store, candidate))
+      .filter(Boolean),
+    ...stagedShapes
+      .filter((candidate) => candidate.parentId === parentId)
+      .map((candidate) => pageBoundsForShape({ ...store, [candidate.id]: candidate }, candidate))
+      .filter(Boolean),
+  ];
+
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const candidate = { x, y, w: width, h: height };
+    if (!obstacles.some((bounds) => rectsOverlap(candidate, bounds, margin / 2))) return { x, y };
+    x += width + margin;
+    if (attempt > 0 && attempt % 8 === 0) {
+      x = finiteNumber(shape.x, 0);
+      y += height + margin;
+    }
+  }
+
+  return { x, y };
+}
+
+function mergeBriefWhiteboardRecords({ store, pageId, parentId, whiteboardId, shapes, bindings }) {
+  const existingShapesByRole = collectExistingBriefShapesByRole(store, pageId, whiteboardId);
+  const existingCoreItemShapesByKey = collectExistingCoreItemShapesByKey(store, pageId, whiteboardId);
+  const existingArrowsByEndTarget = collectExistingBriefArrowsByEndTarget(store, pageId, whiteboardId);
+  const bindingsByArrowId = groupArrowBindingsByArrowId(bindings);
+  const shapeIdMap = new Map();
+  const createdShapes = [];
+  const createdBindings = [];
+  const updatedShapeIds = [];
+  const usedExistingShapeIds = new Set();
+
+  for (const desired of shapes.filter((shape) => shape.type !== "arrow")) {
+    const role = whiteboardRole(desired);
+    const desiredCoreItemKey = coreItemKey(desired.meta?.protoMeCoreItemKind, desired.meta?.protoMeCoreItemTitle);
+    const existingByCoreItem = desiredCoreItemKey ? existingCoreItemShapesByKey.get(desiredCoreItemKey) : null;
+    const existingByRole = role ? existingShapesByRole.get(role) : null;
+    const canReuseByRole = !desiredCoreItemKey;
+    const reusableExistingByRole =
+      canReuseByRole && existingByRole && !usedExistingShapeIds.has(existingByRole.id) ? existingByRole : null;
+    const existing =
+      existingByCoreItem && !usedExistingShapeIds.has(existingByCoreItem.id) ? existingByCoreItem : reusableExistingByRole;
+    if (existing && existing.type === desired.type) {
+      store[existing.id] = mergeExistingShapeWithDesired(existing, desired);
+      shapeIdMap.set(desired.id, existing.id);
+      updatedShapeIds.push(existing.id);
+      usedExistingShapeIds.add(existing.id);
+      continue;
+    }
+
+    const position = chooseClearShapePosition({ store, pageId, parentId, shape: desired, stagedShapes: createdShapes });
+    const next = {
+      ...desired,
+      parentId,
+      index: chooseIndex({ ...store, ...Object.fromEntries(createdShapes.map((shape) => [shape.id, shape])) }, parentId),
+      x: position.x,
+      y: position.y,
+    };
+    createdShapes.push(next);
+    shapeIdMap.set(desired.id, next.id);
+  }
+
+  for (const createdShape of createdShapes) store[createdShape.id] = createdShape;
+
+  for (const desired of shapes.filter((shape) => shape.type === "arrow")) {
+    const role = whiteboardRole(desired);
+    const desiredBindings = bindingsByArrowId.get(desired.id) ?? [];
+    const endBinding = desiredBindings.find((binding) => binding.props?.terminal === "end");
+    const mappedEndTargetId = endBinding ? shapeIdMap.get(endBinding.toId) : null;
+    const existingByEndTarget = mappedEndTargetId ? existingArrowsByEndTarget.get(mappedEndTargetId) : null;
+    const existingByRole = role ? existingShapesByRole.get(role) : null;
+    const isCoreItemDetailArrow = /^feature-detail-\d+-arrow$/.test(role ?? "");
+    const reusableExistingByRole =
+      !isCoreItemDetailArrow && existingByRole && !usedExistingShapeIds.has(existingByRole.id) ? existingByRole : null;
+    const existing =
+      existingByEndTarget && !usedExistingShapeIds.has(existingByEndTarget.id) ? existingByEndTarget : reusableExistingByRole;
+    if (existing && existing.type === desired.type) {
+      store[existing.id] = {
+        ...existing,
+        meta: { ...existing.meta, ...desired.meta },
+      };
+      shapeIdMap.set(desired.id, existing.id);
+      updatedShapeIds.push(existing.id);
+      usedExistingShapeIds.add(existing.id);
+      continue;
+    }
+
+    const createdArrow = arrowFromBindings({ store, parentId, desiredArrow: desired, desiredBindings, shapeIdMap });
+    if (!createdArrow) continue;
+    createdShapes.push(createdArrow.arrow);
+    createdBindings.push(...createdArrow.bindings);
+    store[createdArrow.arrow.id] = createdArrow.arrow;
+    for (const binding of createdArrow.bindings) store[binding.id] = binding;
+    shapeIdMap.set(desired.id, createdArrow.arrow.id);
+  }
+
+  return {
+    centerShapeId: shapeIdMap.get(shapes.find((shape) => whiteboardRole(shape) === "brief")?.id) ?? null,
+    shapeIds: [...new Set([...updatedShapeIds, ...createdShapes.map((shape) => shape.id)])],
+    bindingIds: createdBindings.map((binding) => binding.id),
+    updatedShapeIds: [...new Set(updatedShapeIds)],
+    createdShapeIds: createdShapes.map((shape) => shape.id),
+    createdBindingIds: createdBindings.map((binding) => binding.id),
+  };
+}
+
 function removeExistingBriefWhiteboardRecords(store, pageId, whiteboardId = null) {
   const removedShapeIds = [];
   const removedShapeIdSet = new Set();
@@ -1360,8 +1605,9 @@ async function upsertProtoMeBriefWhiteboard(args = {}) {
   const originX = args.x === undefined ? 540 : finiteNumber(args.x, 540);
   const originY = args.y === undefined ? 260 : finiteNumber(args.y, 260);
   const brief = normalizeBriefInput(args);
+  const preserveExistingLayout = args.preserveExistingLayout !== false;
   const shouldReplace = args.replaceExisting !== false;
-  const removedRecords = shouldReplace
+  const removedRecords = !preserveExistingLayout && shouldReplace
     ? removeExistingBriefWhiteboardRecords(store, pageId, whiteboardId)
     : { removedShapeIds: [], removedBindingIds: [] };
   const { shapes, bindings, centerShapeId } = buildBriefWhiteboardShapes({
@@ -1373,8 +1619,21 @@ async function upsertProtoMeBriefWhiteboard(args = {}) {
     originY,
   });
 
-  for (const shape of shapes) store[shape.id] = shape;
-  for (const binding of bindings) store[binding.id] = binding;
+  const mergeResult = preserveExistingLayout
+    ? mergeBriefWhiteboardRecords({ store, pageId, parentId, whiteboardId, shapes, bindings })
+    : {
+        centerShapeId,
+        shapeIds: shapes.map((shape) => shape.id),
+        bindingIds: bindings.map((binding) => binding.id),
+        updatedShapeIds: [],
+        createdShapeIds: shapes.map((shape) => shape.id),
+        createdBindingIds: bindings.map((binding) => binding.id),
+      };
+
+  if (!preserveExistingLayout) {
+    for (const shape of shapes) store[shape.id] = shape;
+    for (const binding of bindings) store[binding.id] = binding;
+  }
 
   if (!args.dryRun) {
     await saveCanvasSnapshot(protoMeUrl, nextSnapshot);
@@ -1384,11 +1643,15 @@ async function upsertProtoMeBriefWhiteboard(args = {}) {
     protoMeUrl,
     pageId,
     whiteboardId,
-    centerShapeId,
-    shapeIds: shapes.map((shape) => shape.id),
-    bindingIds: bindings.map((binding) => binding.id),
+    centerShapeId: mergeResult.centerShapeId,
+    shapeIds: mergeResult.shapeIds,
+    bindingIds: mergeResult.bindingIds,
+    updatedShapeIds: mergeResult.updatedShapeIds,
+    createdShapeIds: mergeResult.createdShapeIds,
+    createdBindingIds: mergeResult.createdBindingIds,
     removedShapeIds: removedRecords.removedShapeIds,
     removedBindingIds: removedRecords.removedBindingIds,
+    preservedExistingLayout: preserveExistingLayout,
     dryRun: Boolean(args.dryRun),
   };
 }
@@ -1548,7 +1811,7 @@ function toolDefinitions() {
       name: TOOL_UPSERT_BRIEF_WHITEBOARD,
       title: "Upsert Proto-me Brief Whiteboard",
       description:
-        "Create or refresh a minimal editable mind-map plus flowchart whiteboard for the current product brief on the Proto-me/tldraw canvas, with branch arrows bound to their text nodes.",
+        "Create or refresh a minimal editable mind-map plus flowchart whiteboard for the current product brief on the Proto-me/tldraw canvas, preserving existing node and arrow layout by default.",
       inputSchema: {
         type: "object",
         properties: {
@@ -1660,6 +1923,11 @@ function toolDefinitions() {
           language: { type: "string", enum: ["zh", "en"], description: "Label language. Defaults to auto-detect." },
           whiteboardId: { type: "string", description: "Stable brief whiteboard id. Defaults to product-brief." },
           replaceExisting: { type: "boolean", description: "Replace existing brief whiteboard shapes on the target page. Defaults to true." },
+          preserveExistingLayout: {
+            type: "boolean",
+            description:
+              "Preserve existing whiteboard node and arrow positions/directions while updating text and adding missing records. Defaults to true.",
+          },
           projectDir: { type: "string", description: "Absolute Proto-me project directory containing canvas/<slug>/." },
           canvasSlug: {
             type: "string",
@@ -1793,7 +2061,7 @@ async function handleRequest(message) {
         version: SERVER_VERSION,
       },
       instructions:
-        "Read and update Proto-me canvas state. Use get_proto_me_selection for persisted browser selection, insert_proto_me_image to place local bitmap assets, upsert_proto_me_brief_whiteboard to create or refresh an editable planning whiteboard, and get_proto_me_canvas_text to read canvas edits as planning intent.",
+        "Read and update Proto-me canvas state. Use get_proto_me_selection for persisted browser selection, insert_proto_me_image to place local bitmap assets, upsert_proto_me_brief_whiteboard to create or layout-preserving refresh an editable planning whiteboard, and get_proto_me_canvas_text to read canvas edits as planning intent.",
     });
     return;
   }
