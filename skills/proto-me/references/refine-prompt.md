@@ -7,6 +7,7 @@ Rules:
 - Use bullets, not long paragraphs.
 - Include the original request as one concise bullet.
 - Include a `Product Brief` section with the intended user, desired outcome, main screens or steps, must-have behavior, scope, and definition of done when known.
+- If the product includes sections, columns, menus, tabs, navigation, or content categories, name them explicitly in the `Product Brief` section. Do not hide them inside generic feature prose.
 - Include an `Engineering Constraints and Verification` section when any item is known or clearly implied. Keep it product-level and include:
   - Behavior: the visible user action and expected response.
   - Implementation scope: what the first version must cover and what can wait.

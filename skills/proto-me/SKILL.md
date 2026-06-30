@@ -78,6 +78,7 @@ Ask questions that help turn the user's idea into clear prototype tasks. Follow 
 
 Before choosing user-facing questions, run an internal requirements completeness pass. Do not show this checklist directly unless the user asks. Use it to find gaps across:
 - Product layer: target users, main flow, expected result, must-have behavior, scope, and done criteria.
+- Navigation/content layer: sections, columns, menus, or navigation entries when the product need includes them.
 - Engineering rigor layer: behavior, implementation scope, verification or tests, boundaries, and system impact.
 
 Translate engineering gaps into plain product questions before asking the user:
@@ -125,16 +126,17 @@ Wait for the user to respond. Accept answers in any format:
 When they answer:
 - If they answered a question with a follow-up question of their own, answer it (or finish the discussion with them) before moving to the next round
 - Acknowledge briefly
-- Show the updated product brief following [references/refine-prompt.md](references/refine-prompt.md). Display it in a blockquote so the user can see how their answers are shaping the prototype. The brief must explicitly include both product decisions and engineering constraints/verification when known.
+- Show the updated product brief following [references/refine-prompt.md](references/refine-prompt.md). Display it in a blockquote so the user can see how their answers are shaping the prototype. The brief must explicitly include both product decisions and engineering constraints/verification when known. If the product need includes sections, columns, menus, or navigation entries, name them explicitly in the brief instead of folding them into generic feature prose.
 - Treat product, demo, prototype, app, page, feature, or product brief Q&A as canvas-backed by default when the Proto-me MCP tools are available, unless the user explicitly asks not to use the canvas. The user does not need to ask for visual planning by name.
 - For canvas-backed Q&A, refresh the Proto-me workspace after showing the updated brief:
   - Use `upsert_proto_me_brief_whiteboard` when the Proto-me MCP tool is available, passing `projectDir` and the stable `canvasSlug`.
-  - Put the product title in the center, and branch target users, desired outcome, main flow, core features, key decisions, engineering constraints/verification, remaining unknowns, and done criteria around it.
+  - Put the product title in the center, and branch target users, desired outcome, main flow, core features/sections/menus, key decisions, engineering constraints/verification, remaining unknowns, and done criteria around it.
+  - When the generated brief includes sections, columns, menus, or navigation entries, pass them explicitly to the whiteboard as `sections`, `columns`, `menus`, `menuItems`, or `navigationItems` instead of hiding them inside prose.
   - Pass engineering rigor through dedicated whiteboard fields when available: `engineeringConstraints`, `behavior`, `implementationScope`, `verification`, `boundaries`, and `systemImpact`.
-  - Treat `unknowns` as only currently unresolved high-value questions. When a question has been answered, move the resolved answer into `decisions`, `flow`, `features`, `featureDetails`, engineering constraints/verification, or `done` and remove it from `unknowns`.
+  - Treat `unknowns` as only currently unresolved high-value questions. When a question has been answered, move the resolved answer into `decisions`, `flow`, `features`, `sections`, `menus`, `featureDetails`, engineering constraints/verification, or `done` and remove it from `unknowns`.
   - When the Q&A is complete or the direction is clear enough for `proto-plan`, pass `unknowns: []` unless there are genuinely unresolved decisions that should block or shape execution.
   - Use tldraw arrow bindings between the central brief text and each branch text; do not create decorative unbound arrows when linked text nodes are intended.
-  - For core features, include `featureDetails` so each feature extends from the Core Features node into its own concise child text block with behavior, UX intent, constraints, or acceptance notes.
+  - For core features, sections, columns, menus, and navigation entries, include `featureDetails` so each item extends from the Core Features/Sections/Menus node into its own concise child text block with behavior, UX intent, constraints, or acceptance notes. Order `featureDetails` to match `features`, then `sections`/`columns`, then `menus`/`navigationItems` unless each detail names its item.
   - Use the current clear brief only; do not preserve abandoned ideas unless the user asked for history.
   - If the canvas tool is unavailable, continue the Q&A in chat and keep the brief ready to visualize later.
 - Before each new question-selection pass for a canvas-backed Q&A session, use `get_proto_me_canvas_text` with the stable `canvasSlug` when available and treat edited canvas text as the latest user intent. If chat and canvas conflict, prefer the canvas unless the conflict is risky or impossible to interpret.

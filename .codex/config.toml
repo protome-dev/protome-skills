@@ -1,0 +1,3 @@
+[mcp_servers.proto_me_mcp]
+command = "bash"
+args = ["./scripts/start-mcp.sh"]

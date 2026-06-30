@@ -17,11 +17,12 @@ Read [references/templates.json](references/templates.json), silently use the si
 
 Use the most recent product brief from the `proto-me` Q&A conversation. Prefer a dual-layer brief with:
 - Product layer: target users, main flow, expected result, must-have behavior, scope, and done criteria.
+- Navigation/content layer when present: sections, columns, menus, tabs, navigation entries, or content categories.
 - Engineering constraints and verification layer: behavior, implementation scope, verification/tests, boundaries, and system impact.
 
 If a brief was not shown, generate one now using [references/refine-prompt.md](references/refine-prompt.md). If the product layer is clear but the engineering layer is incomplete, infer only low-risk constraints from the conversation and project context. Do not invent high-risk scope, behavior, or verification commitments; carry important gaps into the agent as unknowns or constraints.
 
-If the user skipped the Design stage, proceed directly from Plan to Agent and do not imply that a visual design was required. If the user used `proto-image-gen` or `proto-image-edit` during the Design stage, treat the resulting image as a visual reference for style, hierarchy, UX intent, and interaction feel. Do not treat generated design-board scaffolding, side annotations, or accidental model artifacts as product requirements unless the user explicitly approved them.
+If the user skipped the Design stage, proceed directly from Plan to Agent and do not imply that a visual design was required. If the user used `proto-image-gen` or `proto-image-edit` during the Design stage, treat the resulting image or image set as visual references for style, hierarchy, UX intent, and interaction feel. When visuals are connected to feature, section, or menu nodes, preserve that mapping in the agent summary. Do not treat generated design-board scaffolding, side annotations, or accidental model artifacts as product requirements unless the user explicitly approved them.
 
 ### Step 3: Generate slug
 

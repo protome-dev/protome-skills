@@ -459,6 +459,10 @@ function firstSelectedShapeId(selection) {
   return selection?.selectedShapes?.length === 1 ? selection.selectedShapes[0]?.id : null;
 }
 
+function uniqueStrings(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
 function resolveTargetPageId(store, args = {}, viewState = null) {
   const explicitPageId = nonEmptyString(args.pageId);
   if (explicitPageId && store[explicitPageId]?.typeName === "page") return explicitPageId;
@@ -497,6 +501,46 @@ function choosePlacement({ store, pageId, parentId, anchorShape, width, height, 
   }
 
   return { x, y, w: width, h: height };
+}
+
+function connectorArrowRecords({ store, parentId, fromShape, toShape, seed, meta }) {
+  const fromBounds = pageBoundsForShape(store, fromShape);
+  const toBounds = pageBoundsForShape(store, toShape);
+  if (!fromBounds || !toBounds) throw new Error("Could not determine connector arrow bounds.");
+
+  const start = { x: fromBounds.x + fromBounds.w, y: fromBounds.y + fromBounds.h / 2 };
+  const end = { x: toBounds.x, y: toBounds.y + toBounds.h / 2 };
+  const arrowId = uniqueRecordId(store, "shape", `${seed}-connector`);
+  const arrow = arrowShape({
+    id: arrowId,
+    parentId,
+    index: chooseIndex(store, parentId),
+    x: start.x,
+    y: start.y,
+    endX: end.x - start.x,
+    endY: end.y - start.y,
+    bend: 0,
+    meta,
+  });
+  const bindings = [
+    arrowBinding({
+      id: uniqueRecordId(store, "binding", `${seed}-connector-start`),
+      arrowId,
+      targetId: fromShape.id,
+      terminal: "start",
+      normalizedAnchor: { x: 1, y: 0.5 },
+      meta,
+    }),
+    arrowBinding({
+      id: uniqueRecordId(store, "binding", `${seed}-connector-end`),
+      arrowId,
+      targetId: toShape.id,
+      terminal: "end",
+      normalizedAnchor: { x: 0, y: 0.5 },
+      meta,
+    }),
+  ];
+  return { arrow, bindings };
 }
 
 async function getImageDimensions(filePath) {
@@ -624,13 +668,60 @@ async function insertProtoMeImage(args = {}) {
     typeName: "shape",
   };
 
+  const connectorAnchorShapeIds = uniqueStrings([
+    ...(args.connectToAnchor === true && anchorShapeId ? [anchorShapeId] : []),
+    ...(Array.isArray(args.connectorAnchorShapeIds) ? args.connectorAnchorShapeIds.map(nonEmptyString) : []),
+  ]);
+  if (connectorAnchorShapeIds.length > 0 && !shapeRecord.meta.protoMeFeatureVisualAnchorShapeIds) {
+    shapeRecord.meta.protoMeFeatureVisualAnchorShapeIds = connectorAnchorShapeIds;
+  }
+  const connectorMetaBase = args.connectorMeta && typeof args.connectorMeta === "object" ? args.connectorMeta : {};
+  const connectorRecords = [];
+  const temporaryConnectorShapeIds = [];
+  if (connectorAnchorShapeIds.length > 0) {
+    store[shapeId] = shapeRecord;
+    try {
+      connectorAnchorShapeIds.forEach((connectorAnchorShapeId, connectorIndex) => {
+        const connectorAnchorShape = getRecord(store, connectorAnchorShapeId, "connector anchor shape");
+        const connectorMeta = {
+          ...connectorMetaBase,
+          protoMeFeatureVisualConnector: true,
+          protoMeFeatureAnchorShapeId: connectorAnchorShape.id,
+          protoMeFeatureVisualShapeId: shapeRecord.id,
+          protoMeConnectorIndex: connectorIndex + 1,
+        };
+        const connector = connectorArrowRecords({
+          store,
+          parentId,
+          fromShape: connectorAnchorShape,
+          toShape: shapeRecord,
+          seed: `${recordSeed}-${sanitizeIdPart(connectorAnchorShape.id, "anchor")}`,
+          meta: connectorMeta,
+        });
+        connectorRecords.push(connector);
+        store[connector.arrow.id] = connector.arrow;
+        temporaryConnectorShapeIds.push(connector.arrow.id);
+      });
+    } finally {
+      delete store[shapeId];
+      for (const temporaryShapeId of temporaryConnectorShapeIds) delete store[temporaryShapeId];
+    }
+  }
+
   if (!args.dryRun) {
     await mkdir(assetsDir, { recursive: true });
     await copyFile(sourceImagePath, filePath);
     store[assetId] = assetRecord;
     store[shapeId] = shapeRecord;
+    for (const connector of connectorRecords) {
+      store[connector.arrow.id] = connector.arrow;
+      for (const binding of connector.bindings) store[binding.id] = binding;
+    }
     await saveCanvasSnapshot(protoMeUrl, snapshot);
   }
+
+  const connectorShapeIds = connectorRecords.map((connector) => connector.arrow.id);
+  const connectorBindingIds = connectorRecords.flatMap((connector) => connector.bindings.map((binding) => binding.id));
 
   return {
     protoMeUrl,
@@ -645,6 +736,9 @@ async function insertProtoMeImage(args = {}) {
     assetUrl: assetRecord.props.src,
     imageSize,
     bounds,
+    connectorShapeId: connectorShapeIds[0] ?? null,
+    connectorShapeIds,
+    connectorBindingIds,
     dryRun: Boolean(args.dryRun),
   };
 }
@@ -678,7 +772,27 @@ function normalizeFeatureGroups(value) {
     .filter((group) => group && (group.title || group.items.length > 0));
 }
 
-function normalizeFeatureDetails(value, features) {
+function normalizeCoreItems(args = {}) {
+  const features = normalizeStringList(args.features);
+  const sections = uniqueStrings([...normalizeStringList(args.sections), ...normalizeStringList(args.columns)]);
+  const menus = uniqueStrings([
+    ...normalizeStringList(args.menus),
+    ...normalizeStringList(args.menuItems),
+    ...normalizeStringList(args.navigationItems),
+  ]);
+  return {
+    features,
+    sections,
+    menus,
+    coreItems: [
+      ...features.map((title) => ({ title, kind: "feature" })),
+      ...sections.map((title) => ({ title, kind: "section" })),
+      ...menus.map((title) => ({ title, kind: "menu" })),
+    ],
+  };
+}
+
+function normalizeFeatureDetails(value, coreItems) {
   const orderedDetails = [];
   const detailsByTitle = new Map();
 
@@ -687,10 +801,13 @@ function normalizeFeatureDetails(value, features) {
       let title = "";
       let items = [];
       if (typeof entry === "string") {
-        title = features[index] ?? "";
+        title = coreItems[index]?.title ?? "";
         items = normalizeStringList(entry);
       } else if (entry && typeof entry === "object") {
-        title = normalizeText(entry.title ?? entry.feature ?? entry.name) || features[index] || "";
+        title =
+          normalizeText(entry.title ?? entry.feature ?? entry.section ?? entry.column ?? entry.menu ?? entry.name) ||
+          coreItems[index]?.title ||
+          "";
         items = [
           ...normalizeStringList(entry.detail ?? entry.description ?? entry.summary),
           ...normalizeStringList(entry.items ?? entry.details),
@@ -703,10 +820,10 @@ function normalizeFeatureDetails(value, features) {
     });
   }
 
-  return features.map((feature, index) => {
-    const explicit = detailsByTitle.get(feature) ?? orderedDetails[index];
+  return coreItems.map((item, index) => {
+    const explicit = detailsByTitle.get(item.title) ?? orderedDetails[index];
     return {
-      title: feature,
+      ...item,
       items: explicit?.items ?? [],
     };
   });
@@ -725,6 +842,13 @@ function whiteboardLabels(language, textSample) {
       outcomes: "目标结果",
       flow: "用户流程",
       features: "核心 Features",
+      featuresShort: "Features",
+      sections: "栏目",
+      menus: "菜单",
+      coreSections: "核心栏目",
+      coreMenus: "核心菜单",
+      sectionsMenus: "核心栏目 / 菜单",
+      featuresSectionsMenus: "核心 Feature / 栏目 / 菜单",
       decisions: "关键决定",
       engineering: "工程约束与验证",
       behavior: "行为",
@@ -743,6 +867,13 @@ function whiteboardLabels(language, textSample) {
     outcomes: "Desired Outcomes",
     flow: "User Flow",
     features: "Core Features",
+    featuresShort: "Features",
+    sections: "Sections",
+    menus: "Menus",
+    coreSections: "Core Sections",
+    coreMenus: "Core Menus",
+    sectionsMenus: "Core Sections / Menus",
+    featuresSectionsMenus: "Core Features / Sections / Menus",
     decisions: "Key Decisions",
     engineering: "Engineering Constraints and Verification",
     behavior: "Behavior",
@@ -769,18 +900,48 @@ function sectionText(title, items, fallback) {
   return `${title}\n${content}`;
 }
 
-function featureSectionText(title, features, featureGroups, fallback) {
+function coreItemsHeading(labels, coreItems, explicitLabel) {
+  const customLabel = normalizeText(explicitLabel);
+  if (customLabel) return customLabel;
+  const kinds = new Set(coreItems.map((item) => item.kind));
+  if (kinds.has("feature") && (kinds.has("section") || kinds.has("menu"))) return labels.featuresSectionsMenus;
+  if (kinds.has("section") && kinds.has("menu")) return labels.sectionsMenus;
+  if (kinds.has("section")) return labels.coreSections;
+  if (kinds.has("menu")) return labels.coreMenus;
+  return labels.features;
+}
+
+function featureSectionText(title, brief, fallback) {
   const lines = [];
-  if (features.length > 0) lines.push(numberedList(features));
-  for (const group of featureGroups) {
+  const hasTypedNavigation = brief.sections.length > 0 || brief.menus.length > 0;
+  if (brief.features.length > 0) {
+    if (hasTypedNavigation) lines.push(brief.labels.featuresShort);
+    lines.push(numberedList(brief.features));
+  }
+  if (brief.sections.length > 0) {
+    lines.push(brief.labels.sections);
+    lines.push(numberedList(brief.sections));
+  }
+  if (brief.menus.length > 0) {
+    lines.push(brief.labels.menus);
+    lines.push(numberedList(brief.menus));
+  }
+  for (const group of brief.featureGroups) {
     if (group.title) lines.push(group.title);
     if (group.items.length > 0) lines.push(bulletList(group.items));
   }
   return `${title}\n${lines.length > 0 ? lines.join("\n") : fallback}`;
 }
 
-function featureDetailText(title, items, fallback) {
-  return `${title}\n${items.length > 0 ? bulletList(items) : fallback}`;
+function coreItemKindLabel(kind, labels) {
+  if (kind === "section") return labels.sections;
+  if (kind === "menu") return labels.menus;
+  return labels.featuresShort;
+}
+
+function featureDetailText(detail, labels, fallback) {
+  const title = detail.kind === "feature" ? detail.title : `${coreItemKindLabel(detail.kind, labels)}: ${detail.title}`;
+  return `${title}\n${detail.items.length > 0 ? bulletList(detail.items) : fallback}`;
 }
 
 function labeledItems(label, items) {
@@ -801,7 +962,7 @@ function normalizeEngineeringConstraints(args, labels) {
 function normalizeBriefInput(args = {}) {
   const title = normalizeText(args.title || args.name || "Product Brief");
   const summary = normalizeText(args.summary || args.description);
-  const features = normalizeStringList(args.features);
+  const { features, sections, menus, coreItems } = normalizeCoreItems(args);
   const sample = [
     title,
     summary,
@@ -809,6 +970,8 @@ function normalizeBriefInput(args = {}) {
     ...normalizeStringList(args.outcomes),
     ...normalizeStringList(args.flow),
     ...features,
+    ...sections,
+    ...menus,
     ...normalizeStringList(args.decisions),
     ...normalizeStringList(args.engineeringConstraints),
     ...normalizeStringList(args.behavior),
@@ -819,6 +982,7 @@ function normalizeBriefInput(args = {}) {
     ...normalizeStringList(args.done),
   ].join("\n");
   const labels = whiteboardLabels(args.language, sample);
+  labels.features = coreItemsHeading(labels, coreItems, args.coreItemsLabel ?? args.featuresLabel);
 
   return {
     title,
@@ -828,7 +992,10 @@ function normalizeBriefInput(args = {}) {
     outcomes: normalizeStringList(args.outcomes),
     flow: normalizeStringList(args.flow),
     features,
-    featureDetails: normalizeFeatureDetails(args.featureDetails, features),
+    sections,
+    menus,
+    coreItems,
+    featureDetails: normalizeFeatureDetails(args.featureDetails, coreItems),
     featureGroups: normalizeFeatureGroups(args.featureGroups),
     decisions: normalizeStringList(args.decisions),
     engineeringConstraints: normalizeEngineeringConstraints(args, labels),
@@ -941,7 +1108,7 @@ function buildBriefWhiteboardShapes({ store, parentId, brief, whiteboardId, orig
     return index;
   }
 
-  function addText(key, position, width, text, size = "s", id = null) {
+  function addText(key, position, width, text, size = "s", id = null, extraMeta = {}) {
     const shape = textShape({
       id: id ?? uniqueRecordId(store, "shape", `${seedPrefix}-${key}`),
       parentId,
@@ -951,7 +1118,7 @@ function buildBriefWhiteboardShapes({ store, parentId, brief, whiteboardId, orig
       w: width,
       text,
       size,
-      meta: { ...metaBase, protoMeBriefWhiteboardRole: key },
+      meta: { ...metaBase, protoMeBriefWhiteboardRole: key, ...extraMeta },
     });
     shapes.push(shape);
     return shape;
@@ -1037,7 +1204,7 @@ function buildBriefWhiteboardShapes({ store, parentId, brief, whiteboardId, orig
       anchor: { x: 180, y: 80 },
       startAnchor: { x: 0.95, y: 0.75 },
       endAnchor: { x: 0.05, y: 0.25 },
-      text: featureSectionText(labels.features, brief.features, brief.featureGroups, fallback),
+      text: featureSectionText(labels.features, brief, fallback),
       bend: 25,
     },
     {
@@ -1118,7 +1285,11 @@ function buildBriefWhiteboardShapes({ store, parentId, brief, whiteboardId, orig
         { x: 0, y: 0.45 },
         index % 2 === 0 ? 18 : -18
       );
-      addText(key, position, 320, featureDetailText(detail.title, detail.items, fallback), "s", detailShapeId);
+      addText(key, position, 320, featureDetailText(detail, labels, fallback), "s", detailShapeId, {
+        protoMeCoreItemKind: detail.kind,
+        protoMeCoreItemTitle: detail.title,
+        protoMeCoreItemIndex: index + 1,
+      });
     });
   }
 
@@ -1134,6 +1305,7 @@ function removeExistingBriefWhiteboardRecords(store, pageId, whiteboardId = null
   const removedShapeIds = [];
   const removedShapeIdSet = new Set();
   const removedBindingIds = [];
+  const connectorArrowIdsToRemove = new Set();
 
   for (const [id, record] of Object.entries(store)) {
     if (record?.typeName !== "shape") continue;
@@ -1144,11 +1316,30 @@ function removeExistingBriefWhiteboardRecords(store, pageId, whiteboardId = null
     removedShapeIdSet.add(id);
   }
 
+  for (const record of Object.values(store)) {
+    if (record?.typeName !== "binding") continue;
+    const touchesRemovedShape = removedShapeIdSet.has(record.fromId) || removedShapeIdSet.has(record.toId);
+    if (!touchesRemovedShape) continue;
+    const fromShape = store[record.fromId];
+    if (fromShape?.typeName === "shape" && fromShape.meta?.protoMeFeatureVisualConnector === true) {
+      connectorArrowIdsToRemove.add(fromShape.id);
+    }
+  }
+
+  for (const connectorArrowId of connectorArrowIdsToRemove) {
+    const connectorArrow = store[connectorArrowId];
+    if (connectorArrow?.typeName !== "shape") continue;
+    delete store[connectorArrowId];
+    removedShapeIds.push(connectorArrowId);
+    removedShapeIdSet.add(connectorArrowId);
+  }
+
   for (const [id, record] of Object.entries(store)) {
     if (record?.typeName !== "binding") continue;
     const isBriefBinding = matchesBriefWhiteboardMeta(record, whiteboardId);
     const touchesRemovedShape = removedShapeIdSet.has(record.fromId) || removedShapeIdSet.has(record.toId);
-    if (!isBriefBinding && !touchesRemovedShape) continue;
+    const belongsToRemovedConnector = connectorArrowIdsToRemove.has(record.fromId);
+    if (!isBriefBinding && !touchesRemovedShape && !belongsToRemovedConnector) continue;
     delete store[id];
     removedBindingIds.push(id);
   }
@@ -1246,6 +1437,9 @@ async function getProtoMeCanvasText(args = {}) {
         isBriefWhiteboard: shape.meta?.[BRIEF_WHITEBOARD_META_KEY] === true,
         role: shape.meta?.protoMeBriefWhiteboardRole ?? null,
         whiteboardId: shape.meta?.protoMeBriefWhiteboardId ?? null,
+        coreItemKind: shape.meta?.protoMeCoreItemKind ?? null,
+        coreItemTitle: shape.meta?.protoMeCoreItemTitle ?? null,
+        coreItemIndex: shape.meta?.protoMeCoreItemIndex ?? null,
       };
     })
     .filter(Boolean)
@@ -1303,7 +1497,7 @@ function toolDefinitions() {
       name: TOOL_INSERT_IMAGE,
       title: "Insert Proto-me Image",
       description:
-        "Copy a local bitmap into a Proto-me page-local assets folder, create a tldraw image asset and shape, place it beside an anchor or clear page area, and save through the Proto-me canvas API.",
+        "Copy a local bitmap into a Proto-me page-local assets folder, create a tldraw image asset and shape, place it beside an anchor or clear page area, optionally connect source nodes to it with bound arrows, and save through the Proto-me canvas API.",
       inputSchema: {
         type: "object",
         properties: {
@@ -1328,6 +1522,16 @@ function toolDefinitions() {
           annotationScreenshot: { type: "string", description: "Source annotation screenshot filename for metadata." },
           shapeMeta: { type: "object", description: "Additional tldraw shape metadata." },
           assetMeta: { type: "object", description: "Additional tldraw asset metadata." },
+          connectToAnchor: {
+            type: "boolean",
+            description: "When true, create a bound arrow from anchorShapeId to the inserted image.",
+          },
+          connectorAnchorShapeIds: {
+            type: "array",
+            items: { type: "string" },
+            description: "Additional shape ids to connect to the inserted image with bound arrows.",
+          },
+          connectorMeta: { type: "object", description: "Additional metadata for generated connector arrows and bindings." },
           dryRun: { type: "boolean", description: "Calculate insertion without copying or saving." },
         },
         required: ["imagePath"],
@@ -1354,9 +1558,32 @@ function toolDefinitions() {
           outcomes: { type: "array", items: { type: "string" }, description: "Desired user-visible outcomes." },
           flow: { type: "array", items: { type: "string" }, description: "Main user or planning steps." },
           features: { type: "array", items: { type: "string" }, description: "Core feature bullets." },
+          sections: {
+            type: "array",
+            items: { type: "string" },
+            description: "Core product sections or content columns that should be explicit in the brief and whiteboard.",
+          },
+          columns: {
+            type: "array",
+            items: { type: "string" },
+            description: "Alias for sections, useful when the product brief uses the term columns.",
+          },
+          menus: {
+            type: "array",
+            items: { type: "string" },
+            description: "Core menu or navigation entries that should be explicit in the brief and whiteboard.",
+          },
+          menuItems: { type: "array", items: { type: "string" }, description: "Alias for menus." },
+          navigationItems: { type: "array", items: { type: "string" }, description: "Alias for menus." },
+          coreItemsLabel: {
+            type: "string",
+            description: "Optional override for the core features/sections/menus node label.",
+          },
+          featuresLabel: { type: "string", description: "Alias for coreItemsLabel." },
           featureDetails: {
             type: "array",
-            description: "One detailed child text block per core feature. Order should match features when title/feature is omitted.",
+            description:
+              "One detailed child text block per core feature, section, or menu. Order should match features, then sections, then menus when title/feature/section/menu is omitted.",
             items: {
               oneOf: [
                 { type: "string" },
@@ -1365,6 +1592,9 @@ function toolDefinitions() {
                   properties: {
                     title: { type: "string" },
                     feature: { type: "string" },
+                    section: { type: "string" },
+                    column: { type: "string" },
+                    menu: { type: "string" },
                     name: { type: "string" },
                     detail: { type: "string" },
                     description: { type: "string" },

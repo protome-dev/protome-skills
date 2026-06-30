@@ -9,9 +9,10 @@ Before writing:
 - Keep the content product-level unless the user explicitly asked for technical detail.
 - Extract and preserve both layers from the brief:
   - Product layer: target users, main flow, expected result, must-have behavior, scope, and done criteria.
+  - Navigation/content layer when present: sections, columns, menus, tabs, navigation entries, or content categories.
   - Engineering constraints and verification layer: behavior, implementation scope, verification/tests, boundaries, and system impact.
 - If the engineering layer is incomplete, infer only low-risk constraints from the brief and project context. Keep unresolved high-value gaps visible instead of silently filling them.
-- If the brief references a Design-stage visual from `proto-image-gen` or `proto-image-edit`, use it as an optional style and UX reference. Keep the product brief as the source of truth when the image and brief conflict. If there is no Design-stage visual, proceed without one.
+- If the brief references a Design-stage visual or image set from `proto-image-gen` or `proto-image-edit`, use it as an optional style and UX reference. Preserve any mapping between visuals and feature, section, or menu nodes. Keep the product brief as the source of truth when an image and brief conflict. If there is no Design-stage visual, proceed without one.
 - Do not copy domain content from any reference agent. Reuse only the general execution structure.
 
 The generated file must use this structure:
@@ -114,4 +115,4 @@ Rules:
 - Do not drop the dual-layer brief. The generated file must explicitly record both product decisions and engineering constraints/verification, even when some items are marked unknown or intentionally out of scope.
 - Do not write implementation code during this phase.
 - Use the user's language for prose unless the user asks otherwise.
-- If the brief references a generated UI design image, treat it as a style and interaction reference unless the user explicitly approved its exact layout. Do not turn design-board scaffolding such as side annotation panels, component notes, responsive preview panels, or multiple device mockups into product requirements. If the design image conflicts with the product brief, the brief wins.
+- If the brief references generated UI design images, treat them as style and interaction references unless the user explicitly approved their exact layouts. Do not turn design-board scaffolding such as side annotation panels, component notes, responsive preview panels, or multiple device mockups into product requirements. If a design image conflicts with the product brief, the brief wins.

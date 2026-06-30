@@ -1,13 +1,13 @@
 ---
 name: proto-image-gen
-description: Generate AI bitmap visual designs for Proto prototype/product ideas in the Proto-me workspace, including concept images, UI/UX interface screens, prototype mockups, vector-style illustrations, flat posters, and infographics with requested in-image text. Use after proto-me Q&A or whenever the user asks to visualize a prototype/product direction. If an AI image holder is selected, fill it; otherwise insert the generated visual to the right of the current text/brief area without covering it.
+description: Generate AI bitmap visual designs for Proto prototype/product ideas in the Proto-me workspace, including concept images, UI/UX interface screens, prototype mockups, vector-style illustrations, flat posters, and infographics with requested in-image text. Use after proto-me Q&A or whenever the user asks to visualize a prototype/product direction. Unless the user explicitly requests a single image, generate a consistent visual set for up to five core features, sections, or menus and connect each image to its source node; if a single AI image holder is intentionally targeted, fill it.
 ---
 
 # Proto-me Image Gen
 
 Use this skill when the user wants an AI-generated visual design placed into the Proto-me workspace. It is specialized for making product prototype ideas visible: concept images, UI/UX interface screens, prototype mockups, vector-style illustrations, flat posters, and infographics.
 
-A selected AI image holder gives a precise size and placement target, but it is not required. Without a holder, generate the visual anyway and insert it to the right of the current text or product-brief whiteboard so the image extends the planning area without covering it.
+A selected AI image holder gives a precise size and placement target, but it is not required. In the Design stage, the default standalone behavior is to generate a consistent visual set for the most important core features, sections, or menus on the current product-brief whiteboard, capped at five images unless the user explicitly asks for more. Insert each image to the right of its corresponding node and connect it with bound arrows. Different features, sections, or menus may connect to the same image when one visual clearly explains the shared surface.
 
 ## Preconditions
 
@@ -41,7 +41,7 @@ meta flag. Support both shapes.
 
    You can also use the Proto-me MCP `get_proto_me_selection` tool if it is available.
 
-   For standalone visual-design generation, also inspect the current page/canvas state enough to identify the active text area. Prefer current product-brief whiteboard text, selected text/note shapes, or the rightmost text shape on the current page as the placement anchor.
+   For standalone visual-design generation, also use `get_proto_me_canvas_text` when available and inspect the current page/canvas state enough to identify product-brief whiteboard nodes. Prefer `feature-detail-*` shapes and their `coreItemKind`, `coreItemTitle`, and `coreItemIndex` metadata. These are the source nodes for feature, section, and menu visual designs.
 
 2. Check whether exactly one selected shape is an AI image holder. A holder is any selected shape with either:
 
@@ -55,7 +55,7 @@ meta flag. Support both shapes.
    meta.protoMeAiImageHolder: true
    ```
 
-   If yes, use the holder workflow below. If not, do not ask the user to select a holder; use the standalone workflow below and insert the generated image into the current Proto-me page.
+   If yes, use the holder workflow below only when the user clearly asks to fill the selected holder, asks for a single image, or the selected holder is the only reasonable target. Otherwise, if the current whiteboard has multiple feature, section, or menu detail nodes, use the feature/section/menu visual-set workflow below. Do not ask the user to select a holder before generating standalone visuals.
 
 3. Choose the placement workflow.
 
@@ -79,7 +79,15 @@ meta flag. Support both shapes.
 
    If the holder is a legacy `geo` rectangle, keep using the legacy placement contract: same `x`, `y`, `rotation`, `parentId`, `props.w`, and `props.h` as the holder.
 
-   Standalone workflow: when no AI holder is selected, generate the image anyway and insert it as a normal image shape on the current page. Place it to the right of the current canvas text area, not on top of the text.
+   Feature/section/menu visual-set workflow: when the current product brief has `feature-detail-*` nodes and the user did not ask for only one image, choose up to five visual targets from those nodes. Rank candidates by:
+
+   - product importance: the item is central to the promised prototype outcome
+   - display value: the item benefits from a distinct screen, state, poster, flow, or concept image
+   - difference: the item would look meaningfully different from already selected targets
+
+   Use one shared visual style brief for the whole set: same aesthetic philosophy, typography mood, color system, composition rules, image type, and device/frame treatment. Each generated prompt should include the shared style brief plus the specific feature, section, or menu behavior and UX intent. If several nodes represent the same screen or navigation area, generate one image for that shared surface and connect every relevant node to that same image.
+
+   Standalone fallback workflow: when no usable feature, section, or menu detail node exists, generate a single image anyway and insert it as a normal image shape on the current page. Place it to the right of the current canvas text area, not on top of the text.
 
    Choose the standalone placement anchor in this order:
 
@@ -89,7 +97,7 @@ meta flag. Support both shapes.
    - a selected non-holder shape that is useful as context
    - a clear page area when no anchor is available
 
-   Prefer the Proto-me MCP `insert_proto_me_image` tool for standalone insertion. Pass the chosen text/brief anchor as `anchorShapeId`, `placement: "right"`, `margin: 40`, and `matchAnchor: false`. If a specific display size or aspect ratio was requested, pass `displayWidth` and `displayHeight`; otherwise use the generated bitmap's natural aspect ratio and a practical display width such as 512-768 canvas units. The insertion result must not cover the text area; if a dry run or returned bounds show overlap, choose a farther-right text anchor or retry with a larger margin.
+   Prefer the Proto-me MCP `insert_proto_me_image` tool for standalone insertion. For visual-set images, pass the primary source node as `anchorShapeId`, `placement: "right"`, `margin: 40`, `matchAnchor: false`, `connectToAnchor: true`, and pass any additional source nodes for the same image as `connectorAnchorShapeIds`. If a specific display size or aspect ratio was requested, pass `displayWidth` and `displayHeight`; otherwise use the generated bitmap's natural aspect ratio and a practical display width such as 512-768 canvas units. The insertion result must not cover the text area; if a dry run or returned bounds show overlap, choose a farther-right text anchor or retry with a larger margin.
 
    For UI design, app prototype, page mockup, or screen mockup requests, the default standalone image must show the target product screen itself, not a design board. Do not add adjacent annotation panels, component notes, responsive previews, desktop companion panels, marketing copy blocks, or side-by-side device comparisons unless the user explicitly asks for a design board, presentation board, comparison, multiple responsive views, or explanatory annotations. If the brief says mobile-first or single-screen app, generate a single app screen in the appropriate device/frame or viewport.
 
@@ -106,6 +114,8 @@ meta flag. Support both shapes.
 4. Generate the bitmap with the built-in `imagegen` skill unless the user explicitly requests another image path. If the requested asset needs visible copy, labels, poster text, ad text, UI text, or typography, include that text directly in the image generation prompt and let the image model produce the final bitmap. Do not default to generating a text-free background and then adding text locally unless the user explicitly asks for local typography, deterministic text overlay, SVG/vector output, or another non-imagegen layout step.
 
    Product-visualization prompts must be concrete about the asset type and prototype intent. Include the target product, audience, use case, visual artifact type, screen/device or poster/infographic format, key user-facing content, desired tone, and any constraints from the product brief. For example, specify whether the output is a single mobile app screen, desktop web screen, concept image, clickable prototype mockup, vector-style hero illustration, flat event poster, or explanatory infographic.
+
+   For a feature/section/menu visual set, generate each selected image from the same shared style brief. The prompt for each image must name the specific source item, whether it is a feature, section, or menu, and the behavior, UX intent, constraints, or acceptance notes from that item's child text block. Do not generate more than five images unless the user explicitly asks for more.
 
    UI generation prompts must not invent extra product surface area outside the requested app screen. If a useful detail such as progress, categories, or next items belongs in the product, place it inside the app screen itself. Do not place it as a separate right-side explanation panel unless the user asked for that board layout.
 
@@ -160,16 +170,24 @@ meta flag. Support both shapes.
      "placement": "right",
      "margin": 40,
      "matchAnchor": false,
+     "connectToAnchor": true,
+     "connectorAnchorShapeIds": ["<additional feature/section/menu node ids that this same image explains>"],
      "shapeMeta": {
        "protoMeGeneratedStandalone": true,
        "protoMePrototypeVisualDesign": true,
-       "protoMeVisualDesignType": "<concept|ui-ux|prototype|illustration|poster|infographic>"
+       "protoMeVisualDesignType": "<concept|ui-ux|prototype|illustration|poster|infographic>",
+       "protoMeVisualDesignForCoreItem": "<feature|section|menu>",
+       "protoMeVisualStyleGroupId": "<stable style group id for this generation set>"
+     },
+     "connectorMeta": {
+       "protoMeVisualStyleGroupId": "<same stable style group id>",
+       "protoMeVisualSetConnector": true
      },
      "altText": "Prototype visual design generated for Proto-me"
    }
    ```
 
-   The MCP tool copies the bitmap into the page-local assets folder, creates the tldraw image asset and shape, places it beside the anchor or a clear page area, avoids overlaps, and saves through the running Proto-me service. Fallback only when MCP is unavailable: insert a normal tldraw image shape on the current page with display size matching the generated bitmap aspect ratio, and compute `x`, `y` to the right of the current text area without covering text.
+   The MCP tool copies the bitmap into the page-local assets folder, creates the tldraw image asset and shape, places it beside the anchor or a clear page area, creates bound connector arrows when requested, avoids overlaps, and saves through the running Proto-me service. Fallback only when MCP is unavailable: insert a normal tldraw image shape on the current page with display size matching the generated bitmap aspect ratio, compute `x`, `y` to the right of the current text area without covering text, and create bound arrows from each source feature/section/menu node to the image when possible.
 
 6. Do not delete the holder unless the user explicitly asks for replacement. Keeping the holder lets Codex identify the intended slot again later. In the standalone workflow, do not create a holder first unless the user explicitly asks for one.
 
@@ -204,5 +222,6 @@ Use labels translated into the user's language when the user is not writing in E
 - If the holder is a legacy rotated `geo` rectangle, preserve the same `rotation` on the image. For `frame` holders, the frame owns placement and the child image should stay unrotated inside it.
 - If there is already a generated image for the same holder and the user asks to replace it, remove or update that generated image shape instead of piling another copy on top.
 - Do not refuse generation solely because no AI image holder is selected. Generate the bitmap and insert it into the current Proto-me page.
+- For feature/section/menu visual sets, do not generate more than five images unless the user explicitly asks for more. Prefer fewer images when one visual can clearly explain multiple related nodes.
 - Never overwrite an existing asset file without an explicit replace request; use a timestamped filename.
 - Do not place standalone visual designs on top of current text, product-brief whiteboard nodes, or Q&A planning notes. The default standalone placement is to the right of that text area.

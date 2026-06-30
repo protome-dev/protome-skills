@@ -47,7 +47,7 @@ Codex asks the user to choose a thinking mode:
 - **Fast**: Codex can infer low-risk defaults and only ask about key choices.
 - **Slow**: Codex asks questions and does not make product decisions for the user.
 
-Q&A produces a concise product brief. When the interactive workspace is available, Codex refreshes the brief as a central node with branches for target users, desired outcomes, user flow, core features, key decisions, remaining unknowns, and done criteria. Users can edit those nodes directly, and Codex reads those edits before the next planning round.
+Q&A produces a concise product brief. When the interactive workspace is available, Codex refreshes the brief as a central node with branches for target users, desired outcomes, user flow, core features/sections/menus, key decisions, remaining unknowns, and done criteria. If the product includes sections or menus, the brief and whiteboard name them explicitly and add one concise child detail block per item. Users can edit those nodes directly, and Codex reads those edits before the next planning round.
 
 ### 3. Design (Optional)
 
@@ -56,7 +56,7 @@ After Plan, the user has two choices:
 - Use `proto-image-gen` to create a visual design.
 - Skip Design and call `proto-plan` to enter Agent directly.
 
-`proto-image-gen` is meant for: concept images, UI/UX interface designs, product prototype mockups, vector-style illustrations, flat posters, and infographics.
+`proto-image-gen` is meant for: concept images, UI/UX interface designs, product prototype mockups, vector-style illustrations, flat posters, and infographics. Unless the user asks for one image, Design can generate a consistent visual set for up to five core features, sections, or menus, place each image beside its source node, and connect them with arrows.
 
 After generation, the user can keep refining with `proto-image-edit`, or call `proto-plan` to enter Agent.
 
@@ -114,7 +114,7 @@ You can also ask for a more specific visual artifact:
 Use $proto-image-gen to create an infographic that explains the core workflow from the current brief.
 ```
 
-Codex generates from the brief and places standalone images in a clear area to the right of the current text brief. If an AI image holder is selected in the interactive workspace, Codex generates for that holder's size and aspect ratio.
+Codex generates from the brief and places standalone images to the right of the relevant feature, section, or menu nodes, with arrows connecting the source text to the generated visual. It generates at most five images by default, chosen by importance, display value, and difference. If the user asks for one image or intentionally targets an AI image holder, Codex generates for that holder's size and aspect ratio.
 
 ![Generate and insert a new image with Proto-me](assets/generate-image.png)
 
@@ -168,7 +168,7 @@ Proto-me starts a local service at `http://127.0.0.1:43217/`. If the default por
 
 | Skill | Description |
 |---|---|
-| `proto-image-gen` | Generate prototype visual designs and insert them to the right of the current text brief or into the selected AI image holder |
+| `proto-image-gen` | Generate prototype visual designs, usually as up to five connected feature/section/menu visuals, or as one image for an explicitly targeted holder |
 | `proto-image-edit` | Revise prototype visuals from user-provided annotation screenshots and place each result beside its original |
 | `proto-frontend-design` | Generate distinctive, production-grade frontend interface code that avoids generic AI aesthetics |
 
@@ -239,6 +239,36 @@ codex plugin add proto-me@protome-bundled
 ```
 
 After installing, start a new Codex conversation so the new skills and MCP tools are loaded cleanly.
+
+### Upgrade to Latest Version
+
+#### Ask Codex To Upgrade It
+
+Send the following message to Codex:
+
+```text
+Please upgrade the Proto-me Codex plugin installed at ~/marketplace/plugins/proto-me.
+Pull the latest changes with git pull --ff-only, run npm install and npm run build,
+verify that ~/marketplace/.agents/plugins/marketplace.json uses marketplace name protome-bundled,
+then refresh the Codex plugin cache by running codex plugin remove proto-me@protome-bundled
+and codex plugin add proto-me@protome-bundled.
+After upgrading, validate the plugin and tell me whether I should start a new conversation to load the updated skills and MCP tools.
+```
+
+#### Manual Upgrade
+
+Update the local plugin checkout, rebuild it, then reinstall the plugin so Codex refreshes its cached copy:
+
+```bash
+cd ~/marketplace/plugins/proto-me
+git pull --ff-only
+npm install
+npm run build
+codex plugin remove proto-me@protome-bundled
+codex plugin add proto-me@protome-bundled
+```
+
+After upgrading, start a new Codex conversation so the updated skills and MCP tools are loaded cleanly.
 
 ## Data Layout
 
