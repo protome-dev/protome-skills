@@ -45,7 +45,7 @@ The user provides a product, feature, page, workflow, or prototype idea. Codex e
 Codex asks the user to choose a thinking mode:
 
 - **Fast**: Codex can infer low-risk defaults and only ask about key choices.
-- **Slow**: Codex asks questions and does not make product decisions for the user.
+- **Slow**: Codex asks continuing 3-5 question rounds and does not make product decisions for the user. It keeps going until the user chooses Design / Agent, or until the only remaining questions are low-value and answerable from context.
 
 Q&A produces a concise product brief. When the interactive workspace is available, Codex refreshes the brief as a central node with branches for target users, desired outcomes, user flow, core features/sections/menus, key decisions, remaining unknowns, and done criteria. If the product includes sections or menus, the brief and whiteboard name them explicitly and add one concise child detail block per item. Users can edit and rearrange those nodes directly; later refreshes preserve existing node and arrow layout, update text in place, and add missing items without rebuilding the board.
 
@@ -87,97 +87,6 @@ The user can ask Codex to revise the generated agent file. This stage edits only
 ### 6. Execute
 
 After user confirmation, Codex creates an execution goal and implements the prototype from the agent file. Execution work tracks task plan, findings, and progress in project-local planning files.
-
-## Usage
-
-### Start Product Prototype Discovery
-
-In Codex, say:
-
-```text
-Use $proto-me to help me prototype a new onboarding flow.
-```
-
-Codex explores the project, asks for Fast or Slow mode, runs Q&A, and generates an editable product brief when the interactive workspace is available.
-
-### Generate Prototype Visual Design
-
-After Plan, say:
-
-```text
-Use $proto-image-gen to generate a mobile UI concept for this prototype.
-```
-
-You can also ask for a more specific visual artifact:
-
-```text
-Use $proto-image-gen to create an infographic that explains the core workflow from the current brief.
-```
-
-Codex generates from the brief and places standalone images to the right of the relevant feature, section, or menu nodes, with arrows connecting the source text to the generated visual. It generates at most five images by default, chosen by importance, display value, and difference. If the user asks for one image or intentionally targets an AI image holder, Codex generates for that holder's size and aspect ratio.
-
-![Generate and insert a new image with Proto-me](assets/generate-image.png)
-
-### Revise From An Annotation Screenshot
-
-1. Annotate an image in the interactive workspace.
-2. Take a screenshot of the annotated image and send it to Codex.
-3. Use this prompt:
-
-```text
-Use $proto-image-edit to revise this Proto-me visual design from my annotation screenshot.
-```
-
-Codex reads the notes and arrows in the screenshot, generates a clean revised image without annotation artifacts, and places it beside the original. The original image and annotations are not deleted or moved.
-
-![Generate a revised image from a Proto-me annotation screenshot](assets/annotation-edit.png)
-
-### Go Directly To Agent
-
-Design is optional. After Plan, say:
-
-```text
-Use $proto-plan to generate the prototype agent from the current brief.
-```
-
-If a visual design exists, `proto-plan` treats it as an optional style and experience reference. If no visual design exists, `proto-plan` proceeds from the product brief alone.
-
-### Open The Interactive Workspace
-
-When you need to view or directly edit the brief, visuals, annotations, or intermediate artifacts:
-
-```text
-Open the Proto-me canvas for this project.
-```
-
-Proto-me starts a local service at `http://127.0.0.1:43217/`. If the default port is busy, Vite chooses a fallback port and writes the actual URL to `canvas/<slug>/proto-me-runtime.json`. In the Codex desktop app, Codex automatically opens the workspace in the in-app browser.
-
-![Open Proto-me interactive workspace in Codex](assets/open-canvas.png)
-
-## Skills
-
-### Core Discovery Flow
-
-| Skill | Description |
-|---|---|
-| `proto-me` | Start product prototype discovery, complete Explore and Plan, then offer optional Design or direct Agent handoff |
-| `proto-plan` | Generate a durable prototype agent file from the product brief and optional design reference |
-| `proto-brainstorming` | Explore user intent, requirements, and design through collaborative dialogue before any creative work |
-
-### Visual Design
-
-| Skill | Description |
-|---|---|
-| `proto-image-gen` | Generate prototype visual designs, usually as up to five connected feature/section/menu visuals, or as one image for an explicitly targeted holder |
-| `proto-image-edit` | Revise prototype visuals from user-provided annotation screenshots and place each result beside its original |
-| `proto-frontend-design` | Generate distinctive, production-grade frontend interface code that avoids generic AI aesthetics |
-
-### Workspace & Execution
-
-| Skill | Description |
-|---|---|
-| `proto-open-canvas` | Open the local Proto-me interactive workspace for editing briefs, reviewing visuals, and making annotations |
-| `proto-planning-with-files` | Track task plan, findings, and progress for complex execution work |
 
 ## Installation
 
@@ -269,6 +178,85 @@ codex plugin add proto-me@protome-bundled
 ```
 
 After upgrading, start a new Codex conversation so the updated skills and MCP tools are loaded cleanly.
+
+## Usage
+
+Here is a complete walkthrough using a real example: prototyping a **Content Calendar** to plan and schedule content across Instagram, YouTube, Twitter, and TikTok.
+
+### Step 1 — Start Prototype Explore
+
+In Codex, say:
+
+```text
+Use $proto-me to help me prototype a Content Calendar to plan and schedule content across platforms like Instagram, YouTube, Twitter and TikTok.
+```
+
+Codex explores the project, identifies constraints, and begins structured product discovery.
+
+### Step 2 — Product Q&A via Canvas
+
+Codex asks you to choose a thinking mode — **Fast** (Codex infers low-risk defaults) or **Slow** (Codex keeps asking 3-5 question rounds until you choose to move on, except when only low-value answerable questions remain). The interactive Canvas workspace opens so you can review and edit the product brief in real time as Q&A progresses.
+
+![Product Q&A with Fast / Slow mode selection in the Canvas workspace](assets/open-canvas.png)
+
+### Step 3 — Generate Visual Design
+
+After the brief is ready, ask Codex to generate visual design concepts:
+
+```text
+Use $proto-image-gen to generate UI designs for the Content Calendar.
+```
+
+Codex creates a consistent visual set for the core features and places each image beside its source node in the Canvas.
+
+![Generate and insert visual design concepts with Proto-me](assets/generate-image.png)
+
+### Step 4 — Generate Agent Plan
+
+Once you are satisfied with the brief and optional visuals, Codex generates an executable prototype agent file that captures every requirement, flow, and design reference.
+
+```text
+Use $proto-plan to generate the prototype agent from the current brief.
+```
+
+![Agent plan generated from the product brief](assets/agent-plan.jpg)
+
+### Step 5 — Execute via Codex Goal
+
+After reviewing and refining the agent file, Codex creates an execution goal and begins implementing the prototype. Progress is tracked in project-local planning files.
+
+![Codex executing the prototype plan as a goal](assets/pursuing-goal.png)
+
+### Step 6 — First Prototype Result
+
+Codex delivers the first working version of the Content Calendar prototype — a fully functional starting point you can iterate on.
+
+![First version of the Content Calendar prototype](assets/execution-result.png)
+
+## Skills
+
+### Core Discovery Flow
+
+| Skill | Description |
+|---|---|
+| `proto-me` | Start product prototype discovery, complete Explore and Plan, then offer optional Design or direct Agent handoff |
+| `proto-plan` | Generate a durable prototype agent file from the product brief and optional design reference |
+| `proto-brainstorming` | Explore user intent, requirements, and design through collaborative dialogue before any creative work |
+
+### Visual Design
+
+| Skill | Description |
+|---|---|
+| `proto-image-gen` | Generate prototype visual designs, usually as up to five connected feature/section/menu visuals, or as one image for an explicitly targeted holder |
+| `proto-image-edit` | Revise prototype visuals from user-provided annotation screenshots and place each result beside its original |
+| `proto-frontend-design` | Generate distinctive, production-grade frontend interface code that avoids generic AI aesthetics |
+
+### Workspace & Execution
+
+| Skill | Description |
+|---|---|
+| `proto-open-canvas` | Open the local Proto-me interactive workspace for editing briefs, reviewing visuals, and making annotations |
+| `proto-planning-with-files` | Track task plan, findings, and progress for complex execution work |
 
 ## Data Layout
 

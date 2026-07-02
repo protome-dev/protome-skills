@@ -89,7 +89,7 @@ Translate engineering gaps into plain product questions before asking the user:
 - System impact -> "Which existing page, flow, or habit should this change?"
 
 Question rules:
-- Choose the three highest-value questions for the current context, not a fixed category list.
+- Choose the highest-value questions for the current context, not a fixed category list. In Slow mode, ask 3-5 questions in each round unless the Slow-mode low-value stop rule below applies.
 - Ask only questions that materially affect the prototype direction, user experience, scope, or definition of done.
 - For every user request, complete at least one user-facing Q&A round after the mode is resolved before saying the direction is clear. Prefer a second round when meaningful uncertainty remains.
 - Always leave at least one high-decision-value product choice for the user instead of resolving the whole brief yourself. High-value choices include target user focus, primary use case, main screen or flow, visual/reference boundary, must-have behavior, scope limit, and definition of done.
@@ -111,10 +111,13 @@ Fast mode:
 - Do not tell the user that the product prototype direction is clear, or invite `proto-plan`, until at least one user-facing Q&A round has been answered after mode selection.
 
 Slow mode:
-- Ask the three highest-value questions directly.
+- Ask 3-5 highest-value questions directly in the first round and in every follow-up round.
 - Do not choose product answers on the user's behalf.
 - Do not fill engineering constraints on the user's behalf; translate missing engineering rigor into product-language questions.
 - Still avoid questions whose answers can be discovered from the project.
+- Keep asking 3-5 more questions after each user answer, similar to `blueprint`, rather than automatically declaring Plan complete just because the brief is clear enough.
+- If you judge that the prototype direction is already clear enough for `proto-plan`, continue the next Slow-mode question round anyway when meaningful questions remain. In that round and every later clear-enough Slow round, briefly remind the user that they can actively end Q&A by asking for Design, `proto-image-gen`, or `proto-plan`.
+- Only stop Slow-mode Q&A on your own when every remaining possible question is low-value and answerable from the project, canvas, existing brief, or common non-product defaults. Do not pad the round with low-value questions. When using this low-value stop rule, say that the remaining questions are low-value/answerable and then offer the Design or `proto-plan` next step.
 
 ### Step 6: Continue Q&A
 
@@ -135,15 +138,18 @@ When they answer:
   - When the generated brief includes sections, columns, menus, or navigation entries, pass them explicitly to the whiteboard as `sections`, `columns`, `menus`, `menuItems`, or `navigationItems` instead of hiding them inside prose.
   - Pass engineering rigor through dedicated whiteboard fields when available: `engineeringConstraints`, `behavior`, `implementationScope`, `verification`, `boundaries`, and `systemImpact`.
   - Treat `unknowns` as only currently unresolved high-value questions. When a question has been answered, move the resolved answer into `decisions`, `flow`, `features`, `sections`, `menus`, `featureDetails`, engineering constraints/verification, or `done` and remove it from `unknowns`.
-  - When the Q&A is complete or the direction is clear enough for `proto-plan`, pass `unknowns: []` unless there are genuinely unresolved decisions that should block or shape execution.
+  - For Fast mode, when the Q&A is complete or the direction is clear enough for `proto-plan`, pass `unknowns: []` unless there are genuinely unresolved decisions that should block or shape execution.
+  - For Slow mode, do not treat "clear enough for `proto-plan`" as completion by itself. Keep unresolved meaningful questions in `unknowns` and keep asking. Pass `unknowns: []` only when the user actively ends Q&A or when the Slow-mode low-value stop rule applies.
   - Use tldraw arrow bindings between the central brief text and each branch text; do not create decorative unbound arrows when linked text nodes are intended.
   - For core features, sections, columns, menus, and navigation entries, include `featureDetails` so each item extends from the Core Features/Sections/Menus node into its own concise child text block with behavior, UX intent, constraints, or acceptance notes. Order `featureDetails` to match `features`, then `sections`/`columns`, then `menus`/`navigationItems` unless each detail names its item.
   - Use the current clear brief only; do not preserve abandoned ideas unless the user asked for history.
   - If the canvas tool is unavailable, continue the Q&A in chat and keep the brief ready to visualize later.
 - Before each new question-selection pass for a canvas-backed Q&A session, use `get_proto_me_canvas_text` with the stable `canvasSlug` when available and treat edited canvas text as the latest user intent. If chat and canvas conflict, prefer the canvas unless the conflict is risky or impossible to interpret.
 - Run another question-selection pass using the active thinking mode.
-- Continue until the prototype direction is clear enough for `proto-plan` and at least one user-facing Q&A round has been answered after mode selection. Run a second round when any high-value product decision remains unresolved, or until the user invokes `proto-plan`.
-- When the Q&A direction is clear enough, tell the user they can either use `proto-image-gen` to create an optional visual design in the current workspace, or call `proto-plan` to move directly into the Agent stage. Mention that generated visuals can be revised with `proto-image-edit`.
+- In Fast mode, continue until the prototype direction is clear enough for `proto-plan` and at least one user-facing Q&A round has been answered after mode selection. Run a second round when any high-value product decision remains unresolved, or until the user asks to use Design, `proto-image-gen`, or `proto-plan`.
+- In Slow mode, always ask 3-5 more questions after each answer until the user actively ends Q&A by asking for Design, `proto-image-gen`, or `proto-plan`, or until the Slow-mode low-value stop rule applies. Do not end Slow-mode Q&A merely because the direction is clear enough.
+- In Slow mode, if the direction is clear enough but meaningful questions remain, include a short reminder before or after the next questions: the brief is ready enough to move on whenever the user says so, but you will keep asking because Slow mode keeps user decisions explicit.
+- When Q&A has actually ended, tell the user they can either use `proto-image-gen` to create an optional visual design in the current workspace, or call `proto-plan` to move directly into the Agent stage. Mention that generated visuals can be revised with `proto-image-edit`.
 
 Do not generate the agent file. Do not write or modify code files.
 
