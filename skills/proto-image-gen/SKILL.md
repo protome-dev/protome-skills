@@ -79,6 +79,8 @@ meta flag. Support both shapes.
 
    If the holder is a legacy `geo` rectangle, keep using the legacy placement contract: same `x`, `y`, `rotation`, `parentId`, `props.w`, and `props.h` as the holder.
 
+   Skill-generation UI workflow: when the user's prototype direction is to create, package, edit, install, discover, or run an agent skill, treat the Design-stage visual as a chat-first `generate-ui` experience rather than an ordinary product prototype mockup. Prefer a single conversational builder screen that shows the user describing the desired skill, the agent clarifying scope, and a generated UI or skill preview emerging from the chat. Do not default to feature-gallery visuals, generic SaaS dashboards, app-store pages, or broad product marketing screens unless the user explicitly asks for those.
+
    Feature/section/menu visual-set workflow: when the current product brief has `feature-detail-*` nodes and the user did not ask for only one image, choose up to five visual targets from those nodes. Rank candidates by:
 
    - product importance: the item is central to the promised prototype outcome
@@ -100,6 +102,8 @@ meta flag. Support both shapes.
    Prefer the Proto-me MCP `insert_proto_me_image` tool for standalone insertion. For visual-set images, pass the primary source node as `anchorShapeId`, `placement: "right"`, `margin: 40`, `matchAnchor: false`, `connectToAnchor: true`, and pass any additional source nodes for the same image as `connectorAnchorShapeIds`. If a specific display size or aspect ratio was requested, pass `displayWidth` and `displayHeight`; otherwise use the generated bitmap's natural aspect ratio and a practical display width such as 512-768 canvas units. The insertion result must not cover the text area; if a dry run or returned bounds show overlap, choose a farther-right text anchor or retry with a larger margin.
 
    For UI design, app prototype, page mockup, or screen mockup requests, the default standalone image must show the target product screen itself, not a design board. Do not add adjacent annotation panels, component notes, responsive previews, desktop companion panels, marketing copy blocks, or side-by-side device comparisons unless the user explicitly asks for a design board, presentation board, comparison, multiple responsive views, or explanatory annotations. If the brief says mobile-first or single-screen app, generate a single app screen in the appropriate device/frame or viewport.
+
+   For skill-generation UI requests, the target product screen itself is the chat-first `generate-ui` builder: conversation is the primary surface, generated controls or preview are secondary, and the visual should make the skill authoring/install/run loop legible inside that screen.
 
    **Frontend Design Quality**: For any UI/UX screen, app prototype, page mockup, web interface, or frontend-related visual generation, apply the `proto-frontend-design` skill's aesthetic philosophies and guidelines. Before composing the image generation prompt:
 
