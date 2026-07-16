@@ -2,7 +2,11 @@
 
 Output a numbered question list in the conversation. These questions are for the user, not for the generated agent file.
 
-Use 3-5 questions per round. In Slow mode, default to 3-5 follow-up questions every round unless every remaining possible question is low-value and answerable from context. Do not output fewer than 3 Slow-mode questions unless using that low-value stop rule.
+Treat every round as a self-contained question batch:
+- In Fast mode, ask 2-3 questions together. Ask exactly one only when exactly one meaningful high-value decision remains, or every other candidate can be confidently inferred.
+- In Slow mode, ask 3-5 questions together unless every remaining possible question is low-value and answerable from context. Do not output fewer than 3 Slow-mode questions unless using that low-value stop rule.
+
+Restart numbering at `Q1` for every new round. Question numbers are local to the current batch; never continue numbering from a previous round. Do not split multiple already-known meaningful questions into sequential one-question batches.
 
 ```
 > Answer with shorthand like `1a, 2b, 3c, 4a, 5b` or write freely.
@@ -47,7 +51,7 @@ c) Other (describe)
 _Why this matters: [1 short sentence in plain language]_
 ```
 
-Leave two blank lines between questions. Leave a blank line between the question text, "Why this matters" line, and options. Omit Q4 or Q5 only when fewer than 4 or 5 meaningful questions remain.
+Leave two blank lines between questions. Leave a blank line between the question text, "Why this matters" line, and options. In Fast mode, normally end the batch at Q2 or Q3. In Slow mode, end it at Q3, Q4, or Q5 according to how many meaningful questions remain.
 
 Use simple product language:
 - Prefer "Who will use this?", "What should they be able to do?", "What should happen next?", and "What would make this feel done?"

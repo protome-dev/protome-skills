@@ -1,6 +1,6 @@
 {
   "name": "proto-me",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A product prototype exploration tool for Codex that moves ideas toward executable implementation through structured discovery, planning, optional visual design, and agent-driven execution.",
   "author": {
     "name": "Lena Doll",

@@ -89,7 +89,9 @@ Translate engineering gaps into plain product questions before asking the user:
 - System impact -> "Which existing page, flow, or habit should this change?"
 
 Question rules:
-- Choose the highest-value questions for the current context, not a fixed category list. In Slow mode, ask 3-5 questions in each round unless the Slow-mode low-value stop rule below applies.
+- Choose the highest-value questions for the current context, not a fixed category list.
+- Treat every question round as a self-contained batch: ask 2-3 questions in Fast mode and 3-5 questions in Slow mode, subject only to the explicit exceptions below.
+- Restart user-visible question numbering at `Q1` in every round. Number questions only within the current batch and never continue numbering from an earlier round.
 - Ask only questions that materially affect the prototype direction, user experience, scope, or definition of done.
 - For every user request, complete at least one user-facing Q&A round after the mode is resolved before saying the direction is clear. Prefer a second round when meaningful uncertainty remains.
 - Always leave at least one high-decision-value product choice for the user instead of resolving the whole brief yourself. High-value choices include target user focus, primary use case, main screen or flow, visual/reference boundary, must-have behavior, scope limit, and definition of done.
@@ -101,12 +103,14 @@ Question rules:
 
 Fast mode:
 - Before each question round, do a brainstorming-style pass over the three best candidate questions.
+- Ask the 2-3 highest-value questions together in each round. Ask exactly one only when exactly one meaningful high-value decision remains, or when every other candidate can be confidently inferred.
 - If a recommended answer is clear from the user's request, project context, or common product expectations, choose it for the user and record it in the product brief only for low-risk or clearly implied choices.
 - You may record low-risk engineering constraints in the brief, such as "do not add login", "validate the main happy path in the browser", or "keep this to the existing visible workflow", when those constraints are clearly implied.
-- Do not choose all materially important product answers for the user. Keep 1-3 high-value questions open for the user in the first round, even when Fast mode can infer plausible defaults.
+- Do not choose all materially important product answers for the user. Keep 2-3 high-value questions open for the user in the first round, even when Fast mode can infer plausible defaults.
 - If any assumptions or product decisions are recorded before the first user-facing question round, immediately show the current brief and refresh the canvas-backed whiteboard before asking that first round.
 - Explain only high-impact decisions you made for the user.
 - Ask only the candidate questions where the answer is still materially uncertain.
+- Do not split two or more already-known meaningful questions into sequential one-question rounds merely to refresh the brief between answers.
 - If all candidate questions appear answerable by inference, still ask the strongest high-value product choice before considering the brief ready.
 - Do not tell the user that the product prototype direction is clear, or invite `proto-plan`, until at least one user-facing Q&A round has been answered after mode selection.
 
@@ -146,8 +150,8 @@ When they answer:
   - If the canvas tool is unavailable, continue the Q&A in chat and keep the brief ready to visualize later.
 - Before each new question-selection pass for a canvas-backed Q&A session, use `get_proto_me_canvas_text` with the stable `canvasSlug` when available and treat edited canvas text as the latest user intent. If chat and canvas conflict, prefer the canvas unless the conflict is risky or impossible to interpret.
 - Run another question-selection pass using the active thinking mode.
-- In Fast mode, continue until the prototype direction is clear enough for `proto-plan` and at least one user-facing Q&A round has been answered after mode selection. Run a second round when any high-value product decision remains unresolved, or until the user asks to use Design, `proto-image-gen`, or `proto-plan`.
-- In Slow mode, always ask 3-5 more questions after each answer until the user actively ends Q&A by asking for Design, `proto-image-gen`, or `proto-plan`, or until the Slow-mode low-value stop rule applies. Do not end Slow-mode Q&A merely because the direction is clear enough.
+- In Fast mode, continue until the prototype direction is clear enough for `proto-plan` and at least one user-facing Q&A round has been answered after mode selection. Run another batch of 2-3 questions when high-value product decisions remain unresolved; use a one-question final batch only when exactly one meaningful decision remains. Continue until the user asks to use Design, `proto-image-gen`, or `proto-plan`.
+- In Slow mode, always ask a new batch of 3-5 questions after each answer until the user actively ends Q&A by asking for Design, `proto-image-gen`, or `proto-plan`, or until the Slow-mode low-value stop rule applies. Do not end Slow-mode Q&A merely because the direction is clear enough.
 - In Slow mode, if the direction is clear enough but meaningful questions remain, include a short reminder before or after the next questions: the brief is ready enough to move on whenever the user says so, but you will keep asking because Slow mode keeps user decisions explicit.
 - When Q&A has actually ended, tell the user they can either use `proto-image-gen` to create an optional visual design in the current workspace, or call `proto-plan` to move directly into the Agent stage. Mention that generated visuals can be revised with `proto-image-edit`.
 
